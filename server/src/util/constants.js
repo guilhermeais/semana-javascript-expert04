@@ -4,5 +4,7 @@ export const constants = {
     USER_DISCONNECTED: 'userDisconnection',
     
     JOIN_ROOM: 'joinRoom',
+
+    LOBBY_UPDATED: 'lobbyUpdated',
   }
 }
