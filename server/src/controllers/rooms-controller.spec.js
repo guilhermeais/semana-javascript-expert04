@@ -1,36 +1,35 @@
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vitest } from 'vitest'
 import RoomsController from './rooms-controller.js'
 import Attendee from '../entities/attendee.js'
 import { randomUUID } from 'crypto'
 
 describe('RoomsController', () => {
+  function makeSut() {
+    const sut = new RoomsController()
+
+    return {
+      sut,
+    }
+  }
+
+  function makeAttendee() {
+    return new Attendee({
+      id: randomUUID(),
+      img: 'any_img',
+      roomId: randomUUID(),
+      username: 'any_username',
+    })
+  }
+
+  function makeSocket() {
+    return {
+      id: randomUUID(),
+      join: () => {},
+      emit: () => {},
+      to: vitest.fn().mockReturnThis(),
+    }
+  }
   describe('joinRoom()', () => {
-    function makeSut() {
-      const sut = new RoomsController()
-
-      return {
-        sut,
-      }
-    }
-
-    function makeAttendee() {
-      return new Attendee({
-        id: randomUUID(),
-        img: 'any_img',
-        roomId: randomUUID(),
-        username: 'any_username',
-      })
-    }
-
-    function makeSocket() {
-      return {
-        id: randomUUID(),
-        join: () => {},
-        emit: () => {},
-        to: () => ({ emit: () => {} }),
-      }
-    }
-
     test('should create an room if the provided room does not exists', async () => {
       const { sut } = makeSut()
       const attendee = makeAttendee()
@@ -42,6 +41,7 @@ describe('RoomsController', () => {
         room: { id: roomId, topic: 'any_topic' },
       })
 
+      expect(socket.to).toHaveBeenCalledWith(roomId)
       const createdRoom = sut.rooms.get(roomId)
 
       expect(createdRoom).toBeTruthy()
@@ -79,5 +79,106 @@ describe('RoomsController', () => {
       expect(room.attendeesCount).toEqual(2)
       expect(room.owner.id).toEqual(currentOwner.id)
     })
+  })
+
+  describe('disconnect()', () => {
+    describe('given a room with only the owner', () => {
+      test('should disconnect the user and remove the room', async () => {
+        const { sut } = makeSut()
+        const attendee = makeAttendee()
+        const socket = makeSocket()
+        const roomId = randomUUID()
+  
+        sut.joinRoom(socket, {
+          user: attendee,
+          room: { id: roomId, topic: 'any_topic' },
+        })
+  
+        const roomBeforeDisconnect = sut.rooms.get(roomId)
+        expect(roomBeforeDisconnect).toBeTruthy()
+        expect(roomBeforeDisconnect.owner.id).toEqual(attendee.id)
+        expect(roomBeforeDisconnect.users.size).toEqual(1)
+        sut.disconnect(socket)
+  
+        const roomAfterDisconnect = sut.rooms.get(roomId)
+        expect(roomAfterDisconnect).toBeFalsy()
+      });
+    });
+
+    describe.skip('given a room that has other speakers', () => {
+      test('should disconnect the user and promote the last speaker to owner', async () => {
+        const { sut } = makeSut()
+        const attendee = makeAttendee()
+        const socket = makeSocket()
+        const roomId = randomUUID()
+  
+        sut.joinRoom(socket, {
+          user: attendee,
+          room: { id: roomId, topic: 'any_topic' },
+        })
+  
+        const newSpeaker = makeAttendee()
+        sut.joinRoom(socket, {
+          user: newSpeaker,
+          room: { id: roomId, topic: 'any_topic' },
+        })
+  
+        const roomAfterNewSpeaker = sut.rooms.get(roomId)
+        expect(roomAfterNewSpeaker).toBeTruthy()
+        expect(roomAfterNewSpeaker.owner.id).toEqual(attendee.id)
+        expect(roomAfterNewSpeaker.users.size).toEqual(2)
+        expect(roomAfterNewSpeaker.speakersCount).toEqual(2)
+        expect(roomAfterNewSpeaker.attendeesCount).toEqual(2)
+  
+        sut.disconnect(socket)
+  
+        const roomAfterDisconnect = sut.rooms.get(roomId)
+        expect(roomAfterDisconnect).toBeTruthy()
+        expect(roomAfterDisconnect.owner.id).toEqual(newSpeaker.id)
+        expect(roomAfterDisconnect.users.size).toEqual(1)
+        expect(roomAfterDisconnect.speakersCount).toEqual(1)
+        expect(roomAfterDisconnect.attendeesCount).toEqual(1)
+      });
+    });
+
+    describe('given a room tha has only attendees', () => {
+      test('should disconnect the user and set a new owner to the room', async () => {
+        const { sut } = makeSut()
+        const attendee = makeAttendee()
+        const socket = makeSocket()
+        const roomId = randomUUID()
+  
+        sut.joinRoom(socket, {
+          user: attendee,
+          room: { id: roomId, topic: 'any_topic' },
+        })
+  
+        const newAttendee = makeAttendee()
+        const newSocket = makeSocket()
+
+        sut.joinRoom(newSocket, {
+          user: newAttendee,
+          room: { id: roomId, topic: 'any_topic' },
+        })
+  
+        const roomAfterNewAttendee = sut.rooms.get(roomId)
+        expect(roomAfterNewAttendee).toBeTruthy()
+        expect(roomAfterNewAttendee.owner.id).toEqual(attendee.id)
+        expect(roomAfterNewAttendee.users.size).toEqual(2)
+        expect(roomAfterNewAttendee.speakersCount).toEqual(1)
+        expect(roomAfterNewAttendee.attendeesCount).toEqual(2)
+  
+        sut.disconnect(socket)
+  
+        const roomAfterDisconnect = sut.rooms.get(roomId)
+        expect(roomAfterDisconnect).toBeTruthy()
+        expect(roomAfterDisconnect.owner.id).toEqual(newAttendee.id)
+        expect(roomAfterDisconnect.users.size).toEqual(1)
+        expect(roomAfterDisconnect.speakersCount).toEqual(1)
+        expect(roomAfterDisconnect.attendeesCount).toEqual(1)
+
+        expect(socket.to).toHaveBeenCalledWith(roomId)
+      });
+    });
   })
 })
