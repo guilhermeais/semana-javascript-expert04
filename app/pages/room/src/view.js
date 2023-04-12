@@ -32,4 +32,26 @@ export default class View {
   static updateAttendeesOnGrid(users) {
     users.forEach(View.addAttendeeOnGrid)
   }
+
+  static updateAttendeeOnGrid(item) {
+    const attendee = new Attendee(item)
+
+    if (!attendee.isSpeaker) {
+      return
+    }
+
+    View.removeItemFromGrid(attendee.id)
+    View.addAttendeeOnGrid(attendee)
+  }
+
+  static removeItemFromGrid(id) {
+    const item = View._getExistingItemOnGrid({ id })
+    item?.remove()
+  }
+
+  static _getExistingItemOnGrid({ id, baseElement = document }) {
+    const existingItem = baseElement.querySelector(`[id="${id}"]`)
+
+    return existingItem
+  }
 }

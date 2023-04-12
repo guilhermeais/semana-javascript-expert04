@@ -5,6 +5,7 @@ export default class SocketBuilder {
     this.socketUrl = `${socketUrl}/${namespace}`
     this.onUserConnected = () => {}
     this.onUserDisconnected = () => {}
+    this.onUserProfileUpgrade = () => {}
   }
 
   build() {
@@ -12,16 +13,26 @@ export default class SocketBuilder {
       withCredentials: false,
     })
 
-    socket.on('connection', () => console.log('connected!'))
+    socket.on('connect', () => console.log('connected!'))
 
     socket.on(constants.events.USER_CONNECTED, this.onUserConnected)
     socket.on(constants.events.USER_DISCONNECTED, this.onUserDisconnected)
+    socket.on(
+      constants.events.UPGRADE_USER_PERMISSION,
+      this.onUserProfileUpgrade
+    )
 
     return socket
   }
 
   setOnUserConnected(fn) {
     this.onUserConnected = fn
+
+    return this
+  }
+
+  setOnUserProfileUpgrade(fn) {
+    this.onUserProfileUpgrade = fn
 
     return this
   }
