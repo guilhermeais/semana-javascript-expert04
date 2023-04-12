@@ -35,6 +35,75 @@ export default class RoomsController extends BaseController {
     this.#updateGlobalUserData(id)
   }
 
+  disconnect(socket) {
+    console.log('disconnected', socket.id)
+    this.#logoutUser(socket)
+  }
+
+  #logoutUser(socket) {
+    const { id: userId } = socket
+    const user = this.#users.get(userId)
+
+    if (!user) {
+      return
+    }
+
+    this.#users.delete(userId)
+
+    const { roomId } = user
+    const room = this.rooms.get(roomId)
+
+    if (!room) {
+      return
+    }
+
+    const toBeRemoved = [...room.users].find(({ id }) => id === userId)
+    room.users.delete(toBeRemoved) // o set precisa ser deletado assim, com o objeto unico
+
+    const isRoomEmpty = room.users.size === 0
+
+    if (isRoomEmpty) {
+      this.rooms.delete(roomId)
+      return
+    }
+
+    const disconnectedUserWasAnOwner = user.id === room.owner.id
+    const onlyOneUserLeft = room.users.size === 1
+
+    if (onlyOneUserLeft || disconnectedUserWasAnOwner) {
+      room.owner = this.#getNewRoomOwner(room, socket)
+    }
+
+    const updatedRoom = this.#mapRoom(room)
+    this.rooms.set(roomId, updatedRoom)
+
+    socket.to(roomId).emit(constants.event.USER_DISCONNECTED, user)
+  }
+
+  #notifyUserProfileUpgrade(socket, roomId, user) {
+    socket.to(roomId).emit(constants.event.UPGRADE_USER_PERMISSION, user)
+  }
+
+  #getNewRoomOwner(room, socket) {
+    const users = [...room.users.values()]
+    const activeSpeakers = users.find(user => user.isSpeaker)
+
+    const [newOwner] = activeSpeakers ? [activeSpeakers] : users
+    newOwner.isSpeaker = true
+
+    const outdatedUser = this.#users.get(newOwner.id)
+    const updatedUser = new Attendee({
+      ...outdatedUser,
+      ...newOwner,
+    })
+
+    this.#users.set(newOwner.id, updatedUser)
+
+    this.#notifyUserProfileUpgrade(socket, room.id, updatedUser)
+
+    return updatedUser
+  }
+
   #notifyUsersOnRoom(socket, roomId, user) {
     const eventName = constants.event.USER_CONNECTED
 
