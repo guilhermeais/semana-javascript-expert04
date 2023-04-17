@@ -3,9 +3,13 @@ import RoomController from './controller.js'
 import RoomSocketBuilder from './util/roomSocket.js'
 import View from './view.js'
 
+const urlParams = new URLSearchParams(window.location.search)
+const id = urlParams.get('id')
+const topic = urlParams.get('topic')
+
 const room = {
-  id: '001',
-  topic: 'JS Expert',
+  id,
+  topic,
 }
 
 const user = {
