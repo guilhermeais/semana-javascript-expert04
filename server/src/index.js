@@ -1,3 +1,4 @@
+import LobbyController from './controllers/lobby-controller.js'
 import RoomsController from './controllers/rooms-controller.js'
 import { constants } from './util/constants.js'
 import SocketServer from './util/socket.js'
@@ -9,13 +10,22 @@ const socketServer = new SocketServer({
 })
 const server = await socketServer.start()
 
-const roomsController = new RoomsController()
+const roomsPubSub = new Event()
 
+const roomsController = new RoomsController()
+const lobbyController = new LobbyController({
+  activeRooms: roomsController.rooms,
+  roomsListener: roomsPubSub,
+})
 const namespaces = {
   room: {
     controller: roomsController,
     eventEmitter: new Event(),
   },
+  lobby: {
+    controller: lobbyController,
+    eventEmitter: roomsPubSub,
+  }
 }
 
 const routerConfig = Object.entries(namespaces).map(
