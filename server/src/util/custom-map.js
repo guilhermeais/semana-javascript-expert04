@@ -1,9 +1,12 @@
 export default class CustomMap extends Map {
   #observer
-  constructor({ args = [], observer }) {
+  #customMapper
+
+  constructor({ args = [], observer, customMapper = value => value }) {
     super(...args)
 
     this.#observer = observer
+    this.#customMapper = customMapper
   }
 
   set(...args) {
@@ -20,5 +23,11 @@ export default class CustomMap extends Map {
     this.#observer.notify(this)
 
     return result
+  }
+
+  *values() {
+    for (const value of super.values()) {
+      yield this.#customMapper ? this.#customMapper(value) : value
+    }
   }
 }

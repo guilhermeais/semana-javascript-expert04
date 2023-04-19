@@ -9,7 +9,7 @@ export default class Room {
     featuredAttendees,
     owner,
     users,
-  }) {
+  } = {}) {
     this.id = id
     this.topic = topic
     this.attendeesCount = attendeesCount

@@ -13,6 +13,7 @@ export default class RoomsController extends BaseController {
     this.roomsPubSub = roomsPubSub
     this.rooms = new CustomMap({
       observer: this.#roomObserver(),
+      customMapper: this.#mapRoom.bind(this),
     })
   }
 
@@ -159,7 +160,7 @@ export default class RoomsController extends BaseController {
   }
 
   #mapRoom(room) {
-    const users = [...room.users.values()]
+    const users = room.users ? [...room.users.values()] : []
 
     const speakersCount = users.filter(user => user.isSpeaker).length
     const featuredAttendees = users.slice(0, 3)
@@ -168,7 +169,7 @@ export default class RoomsController extends BaseController {
       ...room,
       speakersCount,
       featuredAttendees,
-      attendeesCount: room.users.size,
+      attendeesCount: room.users?.size || 0,
     })
 
     return mappedRoom
