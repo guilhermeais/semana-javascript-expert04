@@ -3,6 +3,7 @@ import RoomsController from './rooms-controller.js'
 import Attendee from '../entities/attendee.js'
 import { randomUUID } from 'crypto'
 import Event from 'events'
+import Room from '../entities/room.js'
 
 describe('RoomsController', () => {
   function makeSut() {
@@ -191,8 +192,17 @@ describe('RoomsController', () => {
     test('should emit LOBBY_UPDATED event on set property of rooms (CustomMap)', () => {
       const { sut, roomsPubSub } = makeSut()
       const roomId = randomUUID()
+      const mockedRoom = new Room({
+        id: roomId,
+        topic: 'any_topic',
+        attendeesCount: 0,
+        speakersCount: 0,
+        owner: makeAttendee(),
+        users: new Set(), 
+        featuredAttendees: [],
+      })
 
-      sut.rooms.set(roomId, { value: 'test' })
+      sut.rooms.set(roomId, mockedRoom)
       roomsPubSub.on('LOBBY_UPDATED', (rooms) => {
         expect(rooms).toBeTruthy()
         expect(rooms.size).toEqual(1)

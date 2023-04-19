@@ -2,12 +2,12 @@ import CustomMap from './custom-map'
 import { describe, test, expect, vitest } from 'vitest'
 
 describe('CustomMap', () => {
-  function makeSut() {
+  function makeSut({ customMapper = value => value } = {}) {
     const observer = {
       notify: vitest.fn(),
     }
-    const sut = new CustomMap({ observer })
-    return { sut, observer }
+    const sut = new CustomMap({ observer, customMapper })
+    return { sut, observer, customMapper }
   }
 
   test('should notify when delete some data from map', () => {
@@ -24,5 +24,30 @@ describe('CustomMap', () => {
     sut.set('key', 'value')
 
     expect(observer.notify).toHaveBeenCalledWith(sut)
+  })
+
+  test('should map the values according to the provided customMapper', () => {
+    const { sut } = makeSut({
+      customMapper: value => ({ name: value.n }),
+    })
+
+    sut.set('key', {
+      n: 'any_name',
+    })
+
+    sut.set('value', {
+      n: 'other_name',
+    })
+
+    const values = [...sut.values()]
+
+    expect(values).toEqual([
+      {
+        name: 'any_name',
+      },
+      {
+        name: 'other_name',
+      }
+    ])
   })
 })
