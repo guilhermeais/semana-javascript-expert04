@@ -70,5 +70,23 @@ describe('LobbyController', () => {
       expect(firstParam).toBe(constants.event.LOBBY_UPDATED)
       expect(secondParam).toEqual([...activeRooms.values()])
     })
+
+    test('should listen to roomsListener for LOBBY_UPDATED event', async () => {
+      const mockedRoom = makeRoom()
+      const activeRooms = new Map([[mockedRoom.id, mockedRoom]])
+      const roomsListener = new Event()
+
+      const { sut } = makeSut({ activeRooms, roomsListener })
+
+      const socket = makeSocket()
+
+      sut.onNewConnection(socket)
+      const newActiveRooms = new Map([...activeRooms, [randomUUID(), makeRoom()]])
+      roomsListener.emit(constants.event.LOBBY_UPDATED, [...newActiveRooms.values()])
+      const [firstParam, secondParam] = socket.emit.mock.calls[1]
+
+      expect(firstParam).toBe(constants.event.LOBBY_UPDATED)
+      expect(secondParam).toEqual([...newActiveRooms.values()])
+    })
   })
 })

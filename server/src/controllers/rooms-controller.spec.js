@@ -2,13 +2,18 @@ import { describe, expect, test, vitest } from 'vitest'
 import RoomsController from './rooms-controller.js'
 import Attendee from '../entities/attendee.js'
 import { randomUUID } from 'crypto'
+import Event from 'events'
 
 describe('RoomsController', () => {
   function makeSut() {
-    const sut = new RoomsController()
+    const roomsPubSub = new Event()
+    const sut = new RoomsController({
+      roomsPubSub
+    })
 
     return {
       sut,
+      roomsPubSub
     }
   }
 
@@ -179,6 +184,32 @@ describe('RoomsController', () => {
 
         expect(socket.to).toHaveBeenCalledWith(roomId)
       });
+    });
+  })
+
+  describe('roomsPubSub', () => {
+    test('should emit LOBBY_UPDATED event on set property of rooms (CustomMap)', () => {
+      const { sut, roomsPubSub } = makeSut()
+      const roomId = randomUUID()
+
+      sut.rooms.set(roomId, { value: 'test' })
+      roomsPubSub.on('LOBBY_UPDATED', (rooms) => {
+        expect(rooms).toBeTruthy()
+        expect(rooms.size).toEqual(1)
+        expect(rooms.get(roomId)).toBeTruthy()
+      })
+    });
+
+     test('should emit LOBBY_UPDATED event on delete property of rooms (CustomMap)', () => {
+      const { sut, roomsPubSub } = makeSut()
+      const roomId = randomUUID()
+
+      sut.rooms.delete(roomId)
+      roomsPubSub.on('LOBBY_UPDATED', (rooms) => {
+        expect(rooms).toBeTruthy()
+        expect(rooms.size).toEqual(1)
+        expect(rooms.get(roomId)).toBeTruthy()
+      })
     });
   })
 })
